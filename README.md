@@ -14,9 +14,3 @@ A single-file (`index.html`), zero-backend web application designed for hosting 
 3. **Table Cell Symbol Cleanup:** Replaces inline LaTeX arrows (`\(\rightarrow\)`) with `→` and spacing (`\(\quad\)`) with Unicode em-spaces (` `) inside Markdown tables.
 4. **Multi-Line Table Cells (`<br>`):** Converts `<br>` tags inside Markdown table cells into Unicode Line Separators (`\u2028`) so multi-line journal entries paste into a single Notion table cell with clean line breaks.
 5. **Optional ASCII Box → Mermaid Flowchart:** Keeps ASCII diagrams as clean `text` code blocks by default, with a toggle in the top bar to convert box-drawing flowcharts into Mermaid `flowchart TD` diagrams.
-
-## How to Host on GitHub Pages
-1. Create a new repository on GitHub (e.g., `notion-markdown-normalizer`).
-2. Upload `index.html` (and optionally `README.md`) to the root of the repository.
-3. Go to **Settings → Pages**, under **Build and deployment**, select **Deploy from a branch**, choose `main` (and `/ (root)`), and click **Save**.
-4. Your app will be live within 60 seconds at `https://<your-github-username>.github.io/<repo-name>/`.
