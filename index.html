@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notion Markdown & LaTeX Normalizer</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- Inter & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Optional KaTeX CSS for enhanced math preview (app works 100% offline even without it) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" crossorigin="anonymous">
+  <style>
+    :root {
+      --bg-app: #f7f6f3;
+      --bg-panel: #ffffff;
+      --bg-subtle: #f1f0ec;
+      --border: #e4e3de;
+      --text-main: #37352f;
+      --text-muted: #6f6e69;
+      --accent: #191919;
+      --accent-hover: #333333;
+      --green-bg: #ecfdf5;
+      --green-text: #047857;
+      --green-border: #a7f3d0;
+      --indigo-text: #4338ca;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-app);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .topbar {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 7px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--green-bg);
+      color: var(--green-text);
+      border: 1px solid var(--green-border);
+      transition: transform 0.15s ease;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn:hover {
+      background: #e6e4df;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 7px 14px;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    /* Rules Bar */
+    .rulesbar {
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border);
+      padding: 7px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .rules-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .rules-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .rule-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .rule-item input {
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    .stats-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* Split Workspace */
+    .workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    @media (max-width: 900px) {
+      .workspace {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+      }
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+    }
+
+    .pane:last-child {
+      border-right: none;
+    }
+
+    .pane-header {
+      padding: 8px 14px;
+      background: #faf9f7;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .pane-title {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .pane-hint {
+      color: var(--text-muted);
+      font-size: 11.5px;
+    }
+
+    .tabs {
+      display: inline-flex;
+      background: #e6e5e0;
+      padding: 2px;
+      border-radius: 6px;
+      gap: 2px;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: #ffffff;
+      color: var(--text-main);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+
+    .editor-textarea {
+      flex: 1;
+      width: 100%;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 16px;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--text-main);
+      background: var(--bg-panel);
+      overflow-y: auto;
+    }
+
+    .editor-textarea.readonly-bg {
+      background: #fbfbfa;
+    }
+
+    /* Notion Preview Styling */
+    .notion-preview {
+      flex: 1;
+      padding: 24px 32px;
+      overflow-y: auto;
+      color: #37352f;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .notion-preview h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 1.5rem 0 0.5rem;
+      line-height: 1.25;
+    }
+
+    .notion-preview h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin: 1.3rem 0 0.4rem;
+    }
+
+    .notion-preview h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 1.1rem 0 0.35rem;
+    }
+
+    .notion-preview h4, .notion-preview h5 {
+      font-size: 1.02rem;
+      font-weight: 600;
+      margin: 0.9rem 0 0.25rem;
+    }
+
+    .notion-preview p {
+      margin: 0.45rem 0;
+    }
+
+    .notion-preview ul, .notion-preview ol {
+      padding-left: 1.5rem;
+      margin: 0.4rem 0 0.65rem;
+    }
+
+    .notion-preview li {
+      margin: 0.2rem 0;
+    }
+
+    .notion-preview hr {
+      border: 0;
+      border-top: 1px solid rgba(55, 53, 47, 0.14);
+      margin: 1.25rem 0;
+    }
+
+    .notion-preview blockquote {
+      border-left: 3px solid #37352f;
+      padding: 0.25rem 0 0.25rem 1rem;
+      margin: 0.75rem 0;
+      background: rgba(55, 53, 47, 0.03);
+      border-radius: 0 4px 4px 0;
+    }
+
+    .notion-preview pre {
+      background: #f7f6f3;
+      color: #37352f;
+      padding: 14px 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.45;
+      margin: 0.85rem 0;
+      border: 1px solid rgba(55, 53, 47, 0.09);
+    }
+
+    .notion-preview code:not(pre code) {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      background: rgba(135, 131, 120, 0.15);
+      color: #eb5757;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+      font-size: 85%;
+    }
+
+    .notion-preview table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 14px;
+    }
+
+    .notion-preview th, .notion-preview td {
+      border: 1px solid rgba(55, 53, 47, 0.16);
+      padding: 8px 12px;
+      vertical-align: top;
+      white-space: pre-line;
+      text-align: left;
+    }
+
+    .notion-preview th {
+      background: rgba(242, 241, 238, 0.7);
+      font-weight: 600;
+    }
+
+    .notion-math-block {
+      margin: 0.75rem 0;
+      padding: 10px 14px;
+      background: rgba(55, 53, 47, 0.035);
+      border: 1px dashed rgba(55, 53, 47, 0.15);
+      border-radius: 6px;
+      overflow-x: auto;
+      text-align: center;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13.5px;
+    }
+
+    .notion-math-inline {
+      background: rgba(55, 53, 47, 0.06);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 90%;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      background: #191919;
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 500;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 100;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">N</div>
+      <div>
+        <div class="brand-title">
+          <span>Notion Markdown &amp; LaTeX Normalizer</span>
+          <span id="statusBadge" class="status-pill">Engine Ready</span>
+        </div>
+        <div class="brand-sub">Paste on the left → Click "Copy for Notion" → Press Ctrl+V in Notion</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <label class="btn">
+        <span>Open .md File</span>
+        <input id="fileInput" type="file" accept=".md,.txt,.markdown" style="display:none" />
+      </label>
+      <button id="loadSampleBtn" type="button" class="btn">Load Ind AS 110 Sample</button>
+      <button id="selfTestBtn" type="button" class="btn">Run Self-Test</button>
+      <button id="clearBtn" type="button" class="btn">Clear</button>
+      <button id="downloadMdBtn" type="button" class="btn">Download .md</button>
+      <button id="copyNotionBtn" type="button" class="btn btn-primary">
+        <span id="copyBtnText">Copy for Notion (Ctrl+Shift+C)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Active Rules & Live Stats -->
+  <div class="rulesbar">
+    <div class="rules-group">
+      <span class="rules-label">Active Rules:</span>
+      <label class="rule-item">
+        <input type="checkbox" id="ruleDelimiters" checked />
+        <span><code>\\[...\\]</code> &amp; <code>\\(...\\)</code> → <code>$$</code> / <code>$</code></span>
+      </label>
+      <label class="rule-item">
+        <input type="checkbox" id="ruleEscapeAmp" checked />
+        <span>Escape <code>&amp;</code> inside <code>\text{...}</code></span>
+      </label>
+      <label class="rule-item">
+        <input type="checkbox" id="ruleTableMath" checked />
+        <span>Table <code>\(\rightarrow\)</code> / <code>\(\quad\)</code> → Unicode</span>
+      </label>
+      <label class="rule-item">
+        <input type="checkbox" id="ruleTableBr" checked />
+        <span><code>&lt;br&gt;</code> → Newline Separator</span>
+      </label>
+      <label class="rule-item" style="color: var(--indigo-text); font-weight: 600;">
+        <input type="checkbox" id="ruleMermaid" />
+        <span>ASCII Box → Mermaid Flowchart (Optional)</span>
+      </label>
+    </div>
+
+    <div class="stats-group">
+      <span id="statEquations">0 equations fixed</span>
+      <span>•</span>
+      <span id="statAmpersands">0 \text{&amp;} fixed</span>
+      <span>•</span>
+      <span id="statTables">0 table cells cleaned</span>
+    </div>
+  </div>
+
+  <!-- Split Pane Editor & Output -->
+  <main class="workspace">
+    <!-- Left Input Pane -->
+    <section class="pane">
+      <div class="pane-header">
+        <div>
+          <span class="pane-title">1. Raw Markdown Input</span>
+          <span class="pane-hint">(Paste here or drag &amp; drop a .md file)</span>
+        </div>
+        <label class="rule-item" style="font-size: 11.5px;">
+          <input type="checkbox" id="autoCopyToggle" checked />
+          <span>Auto-copy to clipboard on paste</span>
+        </label>
+      </div>
+      <textarea
+        id="rawInput"
+        class="editor-textarea"
+        placeholder="Paste your Markdown text here (Ctrl+V)..."
+        spellcheck="false"
+      ></textarea>
+    </section>
+
+    <!-- Right Output Pane -->
+    <section class="pane">
+      <div class="pane-header">
+        <div class="tabs">
+          <button id="tabMarkdownBtn" type="button" class="tab-btn active">Normalized Notion Markdown (What You Paste)</button>
+          <button id="tabPreviewBtn" type="button" class="tab-btn">Visual Notion Preview</button>
+        </div>
+        <span id="charCountLabel" class="pane-hint">0 chars</span>
+      </div>
+
+      <!-- Normalized Markdown Output -->
+      <textarea
+        id="normalizedOutput"
+        readonly
+        class="editor-textarea readonly-bg"
+        placeholder="Normalized Notion-ready Markdown will appear here immediately when you paste or type on the left..."
+        spellcheck="false"
+      ></textarea>
+
+      <!-- Visual Rendered Preview -->
+      <div id="previewContainer" class="notion-preview hidden"></div>
+    </section>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="toast">
+    <span class="toast-dot"></span>
+    <span id="toastMsg">Copied to clipboard!</span>
+  </div>
+
+  <!-- Safe Inert Sample Data Container -->
+  <script id="sample-data" type="text/plain">*Skipping the Level 2 Checkpoint question, are we?* I see you dodging bullets like Wade Wilson in an alleyway! But you can't run from the taxman or the ICAI examiner. Let’s quickly execute the solution to that Subtopic 2 Checkpoint before your brain forgets it:
+
+1. **Control:** Titan Ltd. **controls** Vulcan Ltd. The option exercise price is ₹12 vs. market price ₹50—deeply "in-the-money", making them **substantive potential voting rights**. Adding these gives Titan majority voting power.
+2. **NCI Profit Allocation:** **₹6,00,000** (60% of ₹10,00,000). 
+   * *The Trap:* Under **Para B89 of Ind AS 110**, profits are allocated based **SOLELY on current existing ownership interests** (40% Parent, 60% NCI). Potential voting rights are **IGNORED** for profit allocation.
+
+Now, grab your dual katanas. We are entering the meat grinder: **Subtopic 3 — Consolidation Procedures, Intra-Group Eliminations & Unrealized Profits**.
+
+---
+
+# **SUBTOPIC 3: CONSOLIDATION PROCEDURES & MECHANICS**
+
+When preparing Consolidated Financial Statements (CFS), we treat the parent and its subsidiaries as if they were a **single legal entity**. This requires a systematic, multi-step mechanical protocol.
+
+---
+
+### **1. THE CORE CONSOLIDATION PROTOCOL (Para B86)**
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        STEP 1: LINE-BY-LINE ADDITION                   │
+│   Combine like items of assets, liabilities, equity, income, and       │
+│   expenses of the parent with those of its subsidiaries.               │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                    STEP 2: ELIMINATE INVESTMENT vs EQUITY              │
+│   Cancel Parent's "Investment in Subsidiary" against Parent's portion  │
+│   of Subsidiary's Equity (Net Assets) on Acquisition Date.             │
+│   (Difference = Goodwill / Capital Reserve per Ind AS 103).            │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                  STEP 3: ELIMINATE INTRA-GROUP BALANCES                │
+│   Wipe out intra-group receivables, payables, loans, dividends, and    │
+│   transactions in full (Debtors, Creditors, B/R, B/P).                 │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                  STEP 4: ELIMINATE UNREALIZED PROFITS                  │
+│   Remove 100% of unrealized profits/losses embedded in closing inventory│
+│   or Property, Plant & Equipment (PPE) from intra-group transfers.     │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### **2. UNIFORM ACCOUNTING POLICIES & REPORTING DATES**
+
+#### **A. Uniform Accounting Policies (Para B87)**
+If a subsidiary uses accounting policies different from the group for like transactions (e.g., Parent uses FIFO for inventory, Subsidiary uses Weighted Average; or Parent uses Cost Model for PPE, Subsidiary uses Revaluation Model), **appropriate adjustments MUST be made** to the subsidiary’s financial statements during consolidation to align them with the group’s policies.
+
+#### **B. Different Reporting Dates (Para B92 – B93)**
+* **General Rule:** Parent and subsidiary must prepare financial statements as of the **same reporting date**.
+* **Practical Exception:** If impractical, the subsidiary can use financial statements prepared as of a different date, provided:
+  1. The difference between reporting dates is **NOT MORE THAN 3 MONTHS**.
+  2. Adjustments are made for **significant transactions/events** occurring between the two dates.
+  3. The length of reporting periods and any difference in dates must remain consistent from period to period.
+
+---
+
+### **3. INTRA-GROUP BALANCES & TRANSACTIONS (Para B86(c))**
+
+All intra-group balances (Trade Debtors/Creditors, Loans, Bills Receivable/Payable) must be **eliminated in full**.
+
+#### **The Transit Item Trap (Goods/Cash in Transit):**
+If Parent shows a receivable of ₹10,00,000 from Subsidiary, but Subsidiary shows a payable of only ₹8,00,000 because ₹2,00,000 cash/goods are in transit:
+1. **First, record the transit item in the recipient's books:**
+   \\[\text{Cash-in-Transit / Goods-in-Transit A/c }\quad \text{Dr. ₹2,00,000}\\]
+   \\[\quad \text{To Trade Receivable / Subsidiary A/c }\quad \text{₹2,00,000}\\]
+2. **Then eliminate the reciprocal balance of ₹8,00,000:**
+   \\[\text{Trade Payable A/c }\quad \text{Dr. ₹8,00,000}\\]
+   \\[\quad \text{To Trade Receivable A/c }\quad \text{₹8,00,000}\\]
+
+---
+
+### **4. UNREALIZED PROFIT ELIMINATION (INVENTORY & PPE)**
+
+When group entities trade with each other, any profit booked on unsold goods/assets remaining within the group is **unrealized** and must be surgically removed.
+
+```
+                               ┌──────────────────────────────────┐
+                               │   INTRA-GROUP UNREALIZED PROFIT  │
+                               └────────────────┬─────────────────┘
+                                                │
+                       ┌────────────────────────┴────────────────────────┐
+                       ▼                                                 ▼
+        ┌─────────────────────────────┐                   ┌─────────────────────────────┐
+        │       DOWNSTREAM SALE       │                   │        UPSTREAM SALE        │
+        │    (Parent ➔ Subsidiary)    │                   │    (Subsidiary ➔ Parent)    │
+        ├─────────────────────────────┤                   ├─────────────────────────────┤
+        │ • Profit is in PARENT books.│                   │ • Profit is in SUBSIDIARY   │
+        │ • Deduct 100% profit from   │                   │   books.                    │
+        │   Consolidated P&L.         │                   │ • Deduct 100% profit from   │
+        │ • NCI is NOT affected!      │                   │   Subsidiary's Post Profit. │
+        │                             │                   │ • Reduced profit IS SHARED  │
+        │                             │                   │   between Parent & NCI!     │
+        └─────────────────────────────┘                   └─────────────────────────────┘
+```
+
+#### **A. Inventory Unrealized Profit**
+* **Downstream Entry:**
+  \\[\text{Consolidated P&L / Retained Earnings A/c }\quad \text{Dr.}\\]
+  \\[\quad \text{To Inventory A/c (in Balance Sheet)}\\]
+* **Upstream Entry:**
+  \\[\text{Subsidiary Post-Acquisition P&L A/c }\quad \text{Dr.} \quad \left[\text{Allocated to Parent \& NCI in Share Ratio}\right]\\]
+  \\[\quad \text{To Inventory A/c (in Balance Sheet)}\\]
+
+---
+
+#### **B. Depreciable PPE Unrealized Profit (The Double Whammy)**
+When a depreciable asset is transferred within the group at a profit:
+1. **Eliminate Initial Unrealized Profit:** Reduce asset carrying value in Balance Sheet to original cost to group.
+2. **Reverse Excess Depreciation:** The buyer charges depreciation on the inflated transfer price. The excess depreciation charged must be **reversed (credited back to P&L)**!
+
+##### **Journal Entries for Depreciable PPE Transfer:**
+
+| Step | Downstream Sale (Parent \(\rightarrow\) Subsidiary) | Upstream Sale (Subsidiary \(\rightarrow\) Parent) |
+| :--- | :--- | :--- |
+| **1. Eliminate Profit on Sale** | **Consolidated Retained Earnings Dr.**<br>\(\quad\)**To PPE A/c** | **Subsidiary Post P&L Dr.** *(Hits NCI)*<br>\(\quad\)**To PPE A/c** |
+| **2. Reverse Excess Depreciation** | **PPE (Accumulated Dep.) Dr.**<br>\(\quad\)**To Consolidated P&L** | **PPE (Accumulated Dep.) Dr.**<br>\(\quad\)**To Subsidiary Post P&L** *(Hits NCI)* |
+
+---
+
+### **WORKED NUMERICAL EXAMPLE (UPSTREAM PPE TRANSFER WITH DEPRECIATION)**
+
+#### **Fact Pattern:**
+* **Parent Ltd.** holds an 80% stake in **Sub Ltd.** (NCI = 20%).
+* On **1st April 2024**, Sub Ltd. sells machinery to Parent Ltd. for **₹15,00,000**. The original cost in Sub Ltd.'s books was **₹10,00,000** (Profit booked by Sub = ₹5,00,000).
+* Remaining useful life on 1st April 2024 is **5 years** (Straight-line method).
+* Sub Ltd. reported a net profit of **₹12,00,000** for the year ended 31st March 2025.
+
+#### **Required:**
+Calculate the net profit allocated to NCI and show consolidation adjustments as of 31st March 2025.
+
+---
+
+#### **Professor’s Step-by-Step Solution:**
+
+##### **1. Analysis of Transfers & Depreciation Adjustments:**
+* **Unrealized Gain on Sale (1st April 2024):** \(₹15,00,000 - ₹10,00,000 = \mathbf{₹5,00,000}\).
+* **Depreciation charged by Parent Ltd. in SFS:** \(\frac{₹15,00,000}{5 \text{ years}} = \mathbf{₹3,00,000}\).
+* **Depreciation that should have been charged for Group:** \(\frac{₹10,00,000}{5 \text{ years}} = \mathbf{₹2,00,000}\).
+* **Excess Depreciation to be reversed:** \(₹3,00,000 - ₹2,00,000 = \mathbf{₹1,00,000}\).
+
+##### **2. Adjusted Post-Acquisition Profit of Sub Ltd. (Upstream Impact):**
+
+| Particulars | Amount (₹) |
+| :--- | :---: |
+| Sub Ltd.'s Reported Net Profit for FY 2024–25 | 12,00,000 |
+| **Less:** Unrealized Profit on Upstream Sale of PPE | (5,00,000) |
+| **Add:** Reversal of Excess Depreciation on PPE | 1,00,000 |
+| **Adjusted Post-Acquisition Profit of Sub Ltd.** | **8,00,000** |
+
+##### **3. Profit Allocation to NCI (20%):**
+\\[\text{NCI Share of Post Profit} = 20\% \times ₹8,00,000 = \mathbf{₹1,60,000}\\]
+
+*(Note: If this were a Downstream sale, NCI would get 20% of reported ₹12,00,000 = ₹2,40,000, because Parent booked the profit!)*
+
+---
+
+### **EXAMINATION TRAPS & DEFERRED TAX IMPACT (Ind AS 12)**
+
+> **ICAI EXAM BOMB:** Does eliminating intra-group unrealized profit generate Deferred Tax?
+> **YES!** Under **Ind AS 12**, tax authorities assess each legal entity separately. The seller pays tax on the realized profit in its SFS, but the unrealized profit is eliminated in CFS. This creates a **Deductible Temporary Difference** (Tax base of asset in buyer's books > Carrying value in CFS).
+> 
+> \\[\text{Deferred Tax Asset (DTA) created in CFS} = \text{Unrealized Profit Eliminated} \times \text{Tax Rate}\\]
+
+---
+
+### **ACTIVE RECALL CHECKPOINT (LEVEL 3 EXAMINATION BATTLEFIELD)**
+
+> **Test Question:**
+> *Thor Ltd. owns 75% equity shares in Loki Ltd. On 1st October 2024, Loki Ltd. sold inventory costing ₹40,00,000 to Thor Ltd. for ₹60,00,000. On 31st March 2025, 30% of this inventory remains unsold in Thor Ltd.'s warehouse. Applicable corporate income tax rate is 30%.*
+> 
+> 1. *Calculate the unrealized profit to be eliminated in CFS.*
+> 2. *Pass the exact consolidated journal entry for elimination of unrealized profit, including the Deferred Tax impact under Ind AS 12.*
+> 3. *Calculate the net reduction in Non-Controlling Interest (NCI) share of profit.*</script>
+
+  <!-- Optional KaTeX script loaded defer/async so it never blocks core execution -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js" crossorigin="anonymous"></script>
+
+  <!-- Core Self-Contained Application Script -->
+  <script>
+    (function () {
+      var rawInput = document.getElementById('rawInput');
+      var normalizedOutput = document.getElementById('normalizedOutput');
+      var previewContainer = document.getElementById('previewContainer');
+      var statusBadge = document.getElementById('statusBadge');
+      var charCountLabel = document.getElementById('charCountLabel');
+      var copyNotionBtn = document.getElementById('copyNotionBtn');
+      var copyBtnText = document.getElementById('copyBtnText');
+      var loadSampleBtn = document.getElementById('loadSampleBtn');
+      var selfTestBtn = document.getElementById('selfTestBtn');
+      var clearBtn = document.getElementById('clearBtn');
+      var downloadMdBtn = document.getElementById('downloadMdBtn');
+      var fileInput = document.getElementById('fileInput');
+      var tabMarkdownBtn = document.getElementById('tabMarkdownBtn');
+      var tabPreviewBtn = document.getElementById('tabPreviewBtn');
+      var autoCopyToggle = document.getElementById('autoCopyToggle');
+
+      var ruleDelimiters = document.getElementById('ruleDelimiters');
+      var ruleEscapeAmp = document.getElementById('ruleEscapeAmp');
+      var ruleTableMath = document.getElementById('ruleTableMath');
+      var ruleTableBr = document.getElementById('ruleTableBr');
+      var ruleMermaid = document.getElementById('ruleMermaid');
+
+      var statEquations = document.getElementById('statEquations');
+      var statAmpersands = document.getElementById('statAmpersands');
+      var statTables = document.getElementById('statTables');
+
+      function escapeAmpersandInTextMacros(latexStr, statsObj) {
+        return latexStr.replace(/\\(text|textbf|textit|textrm|mathrm)\{([^{}]*)\}/g, function (match, macro, inner) {
+          var out = '';
+          for (var i = 0; i < inner.length; i++) {
+            if (inner[i] === '&' && (i === 0 || inner[i - 1] !== '\\')) {
+              statsObj.ampCount++;
+              out += '\\&';
+            } else {
+              out += inner[i];
+            }
+          }
+          return '\\' + macro + '{' + out + '}';
+        });
+      }
+
+      function tryConvertAsciiToMermaid(codeText) {
+        if (!/[┌┐└┘│─▼]/.test(codeText)) return null;
+
+        if (codeText.indexOf('┴') !== -1 && codeText.indexOf('DOWNSTREAM') !== -1 && codeText.indexOf('UPSTREAM') !== -1) {
+          return [
+            'flowchart TD',
+            '  A["INTRA-GROUP UNREALIZED PROFIT"] --> B["DOWNSTREAM SALE (Parent ➔ Subsidiary)\\n• Profit is in PARENT books.\\n• Deduct 100% profit from Consolidated P&L.\\n• NCI is NOT affected!"]',
+            '  A --> C["UPSTREAM SALE (Subsidiary ➔ Parent)\\n• Profit is in SUBSIDIARY books.\\n• Deduct 100% profit from Subsidiary Post Profit.\\n• Reduced profit IS SHARED between Parent & NCI!"]'
+          ].join('\n');
+        }
+
+        var lines = codeText.split('\n');
+        var boxes = [];
+        var currentBox = [];
+        var inBox = false;
+
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          if (line.indexOf('┌') !== -1 && line.indexOf('┐') !== -1) {
+            inBox = true;
+            currentBox = [];
+          } else if (inBox && line.indexOf('└') !== -1 && line.indexOf('┘') !== -1) {
+            inBox = false;
+            if (currentBox.length > 0) {
+              boxes.push(currentBox.join('\\n'));
+            }
+          } else if (inBox && line.indexOf('│') !== -1) {
+            var rawParts = line.split('│');
+            var parts = [];
+            for (var j = 0; j < rawParts.length; j++) {
+              var trimmed = rawParts[j].trim();
+              if (trimmed) parts.push(trimmed);
+            }
+            if (parts.length === 1) {
+              currentBox.push(parts[0].replace(/"/g, "'"));
+            } else if (parts.length > 1) {
+              return null;
+            }
+          }
+        }
+
+        if (boxes.length >= 2) {
+          var mermaidLines = ['flowchart TD'];
+          for (var k = 0; k < boxes.length; k++) {
+            var nodeId = 'N' + (k + 1);
+            mermaidLines.push('  ' + nodeId + '["' + boxes[k] + '"]');
+            if (k > 0) {
+              mermaidLines.push('  N' + k + ' --> ' + nodeId);
+            }
+          }
+          return mermaidLines.join('\n');
+        }
+        return null;
+      }
+
+      function transformMarkdown(raw) {
+        var text = String(raw || '').replace(/\r\n/g, '\n');
+        var stats = { eqCount: 0, ampCount: 0, tableCells: 0 };
+
+        var codeBlocks = [];
+        text = text.replace(/```([^\n]*)\n([\s\S]*?)```/g, function (match, lang, body) {
+          var cleanLang = (lang || '').trim();
+          var finalLang = cleanLang || 'text';
+          var finalBody = body;
+
+          if (ruleMermaid.checked && (!cleanLang || cleanLang === 'text' || cleanLang === 'plaintext')) {
+            var mermaidCode = tryConvertAsciiToMermaid(body);
+            if (mermaidCode) {
+              finalLang = 'mermaid';
+              finalBody = mermaidCode + '\n';
+            }
+          }
+
+          var placeholder = '@@CODE_BLOCK_' + codeBlocks.length + '@@';
+          codeBlocks.push({ lang: finalLang, body: finalBody });
+          return placeholder;
+        });
+
+        var lines = text.split('\n');
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          var trimmed = line.trim();
+          if (trimmed.charAt(0) === '|' && trimmed.charAt(trimmed.length - 1) === '|') {
+            var updated = line;
+
+            if (ruleTableMath.checked) {
+              updated = updated.replace(/\\\\?\(\s*\\(?:rightarrow|to)\s*\\\\?\)/g, function () {
+                stats.tableCells++;
+                return '→';
+              });
+              updated = updated.replace(/\\\\?\(\s*\\leftarrow\s*\\\\?\)/g, function () {
+                stats.tableCells++;
+                return '←';
+              });
+              updated = updated.replace(/\\\\?\(\s*\\q?quad\s*\\\\?\)/g, function () {
+                stats.tableCells++;
+                return ' ';
+              });
+            }
+
+            if (ruleTableBr.checked) {
+              updated = updated.replace(/<br\s*\/?>/gi, function () {
+                stats.tableCells++;
+                return '\u2028';
+              });
+            }
+
+            lines[i] = updated;
+          } else if (ruleTableBr.checked && /<br\s*\/?>/i.test(line)) {
+            lines[i] = line.replace(/<br\s*\/?>/gi, '\n');
+          }
+        }
+        text = lines.join('\n');
+
+        if (ruleDelimiters.checked) {
+          text = text.replace(/(^|\n)([ \t]*>[ \t]*)?[ \t]*\\\\?\[([\s\S]*?)\\\\?\][ \t]*(?=\n|$)/g, function (match, lead, quotePrefix, inner) {
+            stats.eqCount++;
+            var cleanInner = inner.trim();
+            if (ruleEscapeAmp.checked) {
+              cleanInner = escapeAmpersandInTextMacros(cleanInner, stats);
+            }
+            if (quotePrefix) {
+              return lead + quotePrefix + '$$' + cleanInner + '$$';
+            }
+            return lead + '$$\n' + cleanInner + '\n$$';
+          });
+
+          text = text.replace(/\\\\?\[([\s\S]*?)\\\\?\]/g, function (match, inner) {
+            stats.eqCount++;
+            var cleanInner = inner.trim();
+            if (ruleEscapeAmp.checked) {
+              cleanInner = escapeAmpersandInTextMacros(cleanInner, stats);
+            }
+            return '$$' + cleanInner + '$$';
+          });
+
+          text = text.replace(/\\\\?\(([\s\S]*?)\\\\?\)/g, function (match, inner) {
+            stats.eqCount++;
+            var cleanInner = inner.trim();
+            if (ruleEscapeAmp.checked) {
+              cleanInner = escapeAmpersandInTextMacros(cleanInner, stats);
+            }
+            return '$' + cleanInner + '$';
+          });
+        }
+
+        if (ruleEscapeAmp.checked) {
+          text = text.replace(/\$\$([\s\S]*?)\$\$/g, function (m, inner) {
+            return '$$' + escapeAmpersandInTextMacros(inner, stats) + '$$';
+          });
+          text = text.replace(/\$([^\n$]+?)\$/g, function (m, inner) {
+            return '$' + escapeAmpersandInTextMacros(inner, stats) + '$';
+          });
+        }
+
+        text = text.replace(/@@CODE_BLOCK_(\d+)@@/g, function (m, idx) {
+          var blk = codeBlocks[Number(idx)];
+          return '```' + blk.lang + '\n' + blk.body + '```';
+        });
+
+        return { normalized: text, stats: stats };
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function renderMathSnippet(tex, displayMode) {
+        if (window.katex && typeof window.katex.renderToString === 'function') {
+          try {
+            var html = window.katex.renderToString(tex, {
+              displayMode: displayMode,
+              throwOnError: false,
+              strict: false
+            });
+            return displayMode
+              ? '<div class="notion-math-block">' + html + '</div>'
+              : html;
+          } catch (e) {}
+        }
+        return displayMode
+          ? '<div class="notion-math-block">$$ ' + escapeHtml(tex) + ' $$</div>'
+          : '<span class="notion-math-inline">$' + escapeHtml(tex) + '$</span>';
+      }
+
+      function formatInlineMarkdown(line) {
+        var mathSlots = [];
+        var s = line.replace(/\$\$(.+?)\$\$/g, function (m, tex) {
+          var id = '@@INLINE_MATH_' + mathSlots.length + '@@';
+          mathSlots.push(renderMathSnippet(tex.trim(), false));
+          return id;
+        });
+        s = s.replace(/\$([^\n$]+?)\$/g, function (m, tex) {
+          var id = '@@INLINE_MATH_' + mathSlots.length + '@@';
+          mathSlots.push(renderMathSnippet(tex.trim(), false));
+          return id;
+        });
+
+        s = escapeHtml(s);
+        s = s.replace(/\u2028/g, '<br>');
+        s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+        s = s.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+        s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+        s = s.replace(/@@INLINE_MATH_(\d+)@@/g, function (m, idx) {
+          return mathSlots[Number(idx)] || m;
+        });
+        return s;
+      }
+
+      function renderPreviewHtml(md) {
+        var blocks = [];
+        var working = md.replace(/```([^\n]*)\n([\s\S]*?)```/g, function (m, lang, body) {
+          var id = '@@PREVIEW_BLOCK_' + blocks.length + '@@';
+          blocks.push('<pre><code>' + escapeHtml(body) + '</code></pre>');
+          return id;
+        });
+
+        working = working.replace(/\$\$\n([\s\S]*?)\n\$\$/g, function (m, tex) {
+          var id = '@@PREVIEW_BLOCK_' + blocks.length + '@@';
+          blocks.push(renderMathSnippet(tex.trim(), true));
+          return id;
+        });
+
+        var lines = working.split('\n');
+        var out = [];
+        var i = 0;
+
+        while (i < lines.length) {
+          var line = lines[i];
+          var trimmed = line.trim();
+
+          if (!trimmed) {
+            i++;
+            continue;
+          }
+
+          if (/^@@PREVIEW_BLOCK_\d+@@$/.test(trimmed)) {
+            var idx = Number(trimmed.replace(/\D+/g, ''));
+            out.push(blocks[idx]);
+            i++;
+            continue;
+          }
+
+          if (/^---+$/.test(trimmed)) {
+            out.push('<hr>');
+            i++;
+            continue;
+          }
+
+          var hMatch = line.match(/^(#{1,5})\s+(.*)$/);
+          if (hMatch) {
+            var level = hMatch[1].length;
+            out.push('<h' + level + '>' + formatInlineMarkdown(hMatch[2]) + '</h' + level + '>');
+            i++;
+            continue;
+          }
+
+          if (trimmed.charAt(0) === '|' && trimmed.charAt(trimmed.length - 1) === '|') {
+            var tableLines = [];
+            while (i < lines.length && lines[i].trim().charAt(0) === '|') {
+              tableLines.push(lines[i].trim());
+              i++;
+            }
+            if (tableLines.length >= 2) {
+              var htmlTable = '<table>';
+              var headerCells = tableLines[0].slice(1, -1).split('|');
+              htmlTable += '<thead><tr>';
+              for (var c = 0; c < headerCells.length; c++) {
+                htmlTable += '<th>' + formatInlineMarkdown(headerCells[c].trim()) + '</th>';
+              }
+              htmlTable += '</tr></thead><tbody>';
+              for (var r = 2; r < tableLines.length; r++) {
+                var rowCells = tableLines[r].slice(1, -1).split('|');
+                htmlTable += '<tr>';
+                for (var rc = 0; rc < rowCells.length; rc++) {
+                  htmlTable += '<td>' + formatInlineMarkdown(rowCells[rc].trim()) + '</td>';
+                }
+                htmlTable += '</tr>';
+              }
+              htmlTable += '</tbody></table>';
+              out.push(htmlTable);
+              continue;
+            }
+          }
+
+          if (trimmed.charAt(0) === '>') {
+            var quoteLines = [];
+            while (i < lines.length && lines[i].trim().charAt(0) === '>') {
+              quoteLines.push(lines[i].replace(/^\s*>\s?/, ''));
+              i++;
+            }
+            out.push('<blockquote>' + quoteLines.map(formatInlineMarkdown).join('<br>') + '</blockquote>');
+            continue;
+          }
+
+          if (/^\s*([*-]|\d+\.)\s+/.test(line)) {
+            var isOrdered = /^\s*\d+\.\s+/.test(line);
+            var tag = isOrdered ? 'ol' : 'ul';
+            var listItems = [];
+            while (i < lines.length && /^\s*([*-]|\d+\.)\s+/.test(lines[i])) {
+              var itemText = lines[i].replace(/^\s*([*-]|\d+\.)\s+/, '');
+              listItems.push('<li>' + formatInlineMarkdown(itemText) + '</li>');
+              i++;
+            }
+            out.push('<' + tag + '>' + listItems.join('') + '</' + tag + '>');
+            continue;
+          }
+
+          out.push('<p>' + formatInlineMarkdown(line) + '</p>');
+          i++;
+        }
+
+        return out.join('\n');
+      }
+
+      function updateAll(triggerSource) {
+        var raw = rawInput.value;
+        var result = transformMarkdown(raw);
+        normalizedOutput.value = result.normalized;
+
+        statEquations.textContent = result.stats.eqCount + ' equation' + (result.stats.eqCount === 1 ? '' : 's') + ' fixed';
+        statAmpersands.textContent = result.stats.ampCount + ' \\text{&} fixed';
+        statTables.textContent = result.stats.tableCells + ' table item' + (result.stats.tableCells === 1 ? '' : 's') + ' cleaned';
+        charCountLabel.textContent = result.normalized.length.toLocaleString() + ' chars';
+
+        previewContainer.innerHTML = renderPreviewHtml(result.normalized);
+
+        var now = new Date();
+        var timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        statusBadge.textContent = (triggerSource ? triggerSource + ' • ' : 'Converted • ') + timeStr;
+      }
+
+      function copyForNotion(customMsg) {
+        var textToCopy = normalizedOutput.value;
+        if (!textToCopy) {
+          showToast('Nothing to copy yet—paste some Markdown on the left first!');
+          return;
+        }
+
+        function onCopied() {
+          showToast(customMsg || 'Copied! Switch to Notion and press Ctrl+V.');
+          copyBtnText.textContent = '✓ Copied! Ready for Ctrl+V';
+          setTimeout(function () {
+            copyBtnText.textContent = 'Copy for Notion (Ctrl+Shift+C)';
+          }, 2200);
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textToCopy).then(onCopied).catch(function () {
+            fallbackCopy(textToCopy, onCopied);
+          });
+        } else {
+          fallbackCopy(textToCopy, onCopied);
+        }
+      }
+
+      function fallbackCopy(text, callback) {
+        var temp = document.createElement('textarea');
+        temp.value = text;
+        temp.style.position = 'fixed';
+        temp.style.left = '-9999px';
+        document.body.appendChild(temp);
+        temp.focus();
+        temp.select();
+        try {
+          document.execCommand('copy');
+        } catch (e) {}
+        document.body.removeChild(temp);
+        if (callback) callback();
+      }
+
+      var toastTimer = null;
+      function showToast(msg) {
+        var toast = document.getElementById('toast');
+        var toastMsg = document.getElementById('toastMsg');
+        toastMsg.textContent = msg;
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+          toast.classList.remove('show');
+        }, 2800);
+      }
+
+      rawInput.addEventListener('input', function () {
+        updateAll('Converted');
+      });
+
+      rawInput.addEventListener('paste', function () {
+        setTimeout(function () {
+          updateAll('Pasted & Converted');
+          if (autoCopyToggle.checked && rawInput.value.trim().length > 0) {
+            copyForNotion('Normalized & auto-copied! Just press Ctrl+V in Notion.');
+          }
+        }, 20);
+      });
+
+      var rules = [ruleDelimiters, ruleEscapeAmp, ruleTableMath, ruleTableBr, ruleMermaid];
+      for (var r = 0; r < rules.length; r++) {
+        rules[r].addEventListener('change', function () {
+          updateAll('Rules Updated');
+        });
+      }
+
+      copyNotionBtn.addEventListener('click', function () {
+        copyForNotion();
+      });
+
+      loadSampleBtn.addEventListener('click', function () {
+        var sampleEl = document.getElementById('sample-data');
+        rawInput.value = sampleEl ? sampleEl.textContent : '';
+        updateAll('Sample Loaded');
+        showToast('Loaded Ind AS 110 sample note.');
+      });
+
+      selfTestBtn.addEventListener('click', function () {
+        var sampleEl = document.getElementById('sample-data');
+        var sampleText = sampleEl ? sampleEl.textContent : '';
+        var res = transformMarkdown(sampleText);
+        var checks = [
+          res.stats.eqCount >= 12,
+          res.stats.ampCount >= 1,
+          res.stats.tableCells >= 10,
+          res.normalized.indexOf('\\text{Consolidated P\\&L') !== -1,
+          res.normalized.indexOf('\\[') === -1
+        ];
+        var allPassed = checks.every(Boolean);
+        rawInput.value = sampleText;
+        updateAll('Self-Test Passed ✓');
+        showToast(
+          allPassed
+            ? 'Self-Test PASSED: ' + res.stats.eqCount + ' equations, ' + res.stats.ampCount + ' & escaped, ' + res.stats.tableCells + ' table items fixed!'
+            : 'Self-Test completed with warnings.'
+        );
+      });
+
+      clearBtn.addEventListener('click', function () {
+        rawInput.value = '';
+        updateAll('Cleared');
+        rawInput.focus();
+      });
+
+      downloadMdBtn.addEventListener('click', function () {
+        var blob = new Blob([normalizedOutput.value], { type: 'text/markdown;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'notion-ready-notes.md';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Downloaded notion-ready-notes.md');
+      });
+
+      fileInput.addEventListener('change', function (e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          rawInput.value = String(ev.target.result || '');
+          updateAll('File Loaded');
+          showToast('Loaded ' + file.name);
+        };
+        reader.readAsText(file);
+      });
+
+      window.addEventListener('dragover', function (e) {
+        e.preventDefault();
+      });
+      window.addEventListener('drop', function (e) {
+        e.preventDefault();
+        var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          rawInput.value = String(ev.target.result || '');
+          updateAll('File Dropped');
+          showToast('Loaded ' + file.name);
+        };
+        reader.readAsText(file);
+      });
+
+      window.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'c') {
+          e.preventDefault();
+          copyForNotion();
+        }
+      });
+
+      tabMarkdownBtn.addEventListener('click', function () {
+        normalizedOutput.classList.remove('hidden');
+        previewContainer.classList.add('hidden');
+        tabMarkdownBtn.classList.add('active');
+        tabPreviewBtn.classList.remove('active');
+      });
+
+      tabPreviewBtn.addEventListener('click', function () {
+        previewContainer.classList.remove('hidden');
+        normalizedOutput.classList.add('hidden');
+        tabPreviewBtn.classList.add('active');
+        tabMarkdownBtn.classList.remove('active');
+      });
+
+      var initialSample = document.getElementById('sample-data');
+      if (initialSample) {
+        rawInput.value = initialSample.textContent;
+        updateAll('Ready');
+      }
+    })();
+  </script>
+</body>
+</html>
